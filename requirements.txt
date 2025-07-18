@@ -1,2 +1,3 @@
 ﻿streamlit
 coolprop
+matplotlib
