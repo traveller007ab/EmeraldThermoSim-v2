@@ -1,90 +1,71 @@
-# thermosim.py
+# App.py
 
-import CoolProp.CoolProp as CP
-import matplotlib.pyplot as plt
+import streamlit as st
+from thermosim import simulate_rankine
+from saf_logic import SAFSystem
 
+st.set_page_config(page_title="EmeraldThermoSim V3", layout="wide")
+st.title("💠 EmeraldThermoSim v3")
+st.markdown("""
+A powerful thermodynamic simulator + SAF editor for Rankine Cycle.
+""")
 
-def simulate_rankine(P_high, P_low, T_high, fluid):
-    h1 = CP.PropsSI('H','P',P_low,'Q',0,fluid)
-    s1 = CP.PropsSI('S','P',P_low,'Q',0,fluid)
-    h2 = CP.PropsSI('H','P',P_high,'S',s1,fluid)
-    h3 = CP.PropsSI('H','P',P_high,'T',T_high,fluid)
-    s3 = CP.PropsSI('S','P',P_high,'T',T_high,fluid)
-    h4 = CP.PropsSI('H','P',P_low,'S',s3,fluid)
+# Sidebar inputs
+st.sidebar.header("Rankine Cycle Inputs")
+P_high = st.sidebar.number_input("Boiler Pressure (Pa)", value=8e6)
+P_low = st.sidebar.number_input("Condenser Pressure (Pa)", value=1e5)
+T_high = st.sidebar.number_input("Turbine Inlet Temperature (K)", value=773.15)
+fluid = st.sidebar.selectbox("Working Fluid", ["Water", "R134a", "Ammonia"], index=0)
 
-    work_pump = h2 - h1
-    heat_added = h3 - h2
-    work_turbine = h3 - h4
-    net_work = work_turbine - work_pump
-    efficiency = net_work / heat_added
+# Run Simulation
+if st.sidebar.button("Run Simulation"):
+    results = simulate_rankine(P_high, P_low, T_high, fluid)
 
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
+    col1, col2 = st.columns(2)
 
-    # Placeholder plots for T-s and P-v
-    ax1.set_title("T-s Diagram")
-    ax1.set_xlabel("Entropy (s)")
-    ax1.set_ylabel("Temperature (T)")
-    ax1.plot(
-        [s1, s1, s3, s3],
-        [
-            CP.PropsSI('T','P',P_low,'Q',0,fluid),
-            CP.PropsSI('T','P',P_high,'S',s1,fluid),
-            T_high,
-            CP.PropsSI('T','P',P_low,'S',s3,fluid)
-        ],
-        marker='o'
-    )
+    with col1:
+        st.subheader("Performance Metrics")
+        st.write(f"Pump Work: {results['work_pump']:.2f} J/kg")
+        st.write(f"Turbine Work: {results['work_turbine']:.2f} J/kg")
+        st.write(f"Heat Added: {results['heat_added']:.2f} J/kg")
+        st.write(f"Net Work: {results['net_work']:.2f} J/kg")
+        st.write(f"Thermal Efficiency: {results['efficiency']*100:.2f}%")
 
-    ax2.set_title("P-v Diagram")
-    ax2.set_xlabel("Specific Volume (v)")
-    ax2.set_ylabel("Pressure (P)")
-    v1 = CP.PropsSI('D', 'P', P_low, 'Q', 0, fluid)
-    v2 = CP.PropsSI('D', 'P', P_high, 'S', s1, fluid)
-    v3 = CP.PropsSI('D', 'P', P_high, 'T', T_high, fluid)
-    v4 = CP.PropsSI('D', 'P', P_low, 'S', s3, fluid)
-    ax2.plot([1/v1, 1/v2, 1/v3, 1/v4], [P_low, P_high, P_high, P_low], marker='o')
+    with col2:
+        st.subheader("T-s Diagram")
+        st.pyplot(results['ts_plot'])
+        st.subheader("P-v Diagram")
+        st.pyplot(results['pv_plot'])
 
-    return {
-        "work_pump": work_pump,
-        "heat_added": heat_added,
-        "work_turbine": work_turbine,
-        "net_work": net_work,
-        "efficiency": efficiency,
-        "ts_plot": fig1,
-        "pv_plot": fig2
-    }
+# SAF Environment
+st.markdown("---")
+st.header("🔧 Systematic Architect Functionality (SAF)")
+user_model = st.text_input("Enter model name or version (for simulation reference):", "Basic Rankine Model")
 
+saf = SAFSystem(user_model)
 
-# saf_logic.py
+st.subheader("Core Components")
+new_values = {}
+for component, value in saf.components.items():
+    new_val = st.slider(f"{component}", min_value=0.0, max_value=1.0, value=float(value), step=0.01)
+    saf.modify_component(component, new_val)
+    new_values[component] = new_val
 
-class SAFSystem:
-    def __init__(self, model):
-        self.original_model = model
-        self.components = self._decompose(model)
+if st.button("Update Model"):
+    updated_model = saf.reconstruct_model()
+    comparison = saf.compare_to_original()
+    st.success(updated_model)
+    if comparison:
+        st.info("\n".join(comparison))
+    else:
+        st.info("No changes detected.")
 
-    def _decompose(self, model):
-        # Simulate breakdown into subcomponents (simplified)
-        return {
-            "Pump Efficiency": 0.85,
-            "Turbine Efficiency": 0.9,
-            "Heat Exchanger Effectiveness": 0.95
-        }
+st.markdown("""
+---
+**Developed by EmeraldKing 🧪🔬**  
+Built using Python, Streamlit, and CoolProp
+""")
 
-    def modify_component(self, component, new_value):
-        if component in self.components:
-            self.components[component] = new_value
-
-    def reconstruct_model(self):
-        # Simulate reconstruction (simplified summary)
-        return f"Model updated with: {self.components}"
-
-    def compare_to_original(self):
-        changes = []
-        for key in self.components:
-            if self.components[key] != self._decompose(self.original_model)[key]:
-                changes.append(f"{key} changed to {self.components[key]}")
-        return changes
 
 
 
