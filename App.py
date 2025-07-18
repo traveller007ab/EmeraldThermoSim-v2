@@ -1,51 +1,6 @@
-# EmeraldThermoSim v3 — Powered by SAF (Systematic Architect Functionality)
 
-This is a deployable **Streamlit web app** that merges **thermodynamic simulation (EmeraldThermoSim)** with an intelligent **model engineering framework (SAF)**. It features real-time interaction, editable system diagrams, component-level recalculation, symbolic equation derivation, and AI-powered design suggestions.
 
----
 
-## 🔧 Installation
-```bash
-pip install streamlit coolprop matplotlib graphviz sympy pandas
-```
-
----
-
-## 🚀 Run the App
-```bash
-streamlit run app.py
-```
-
----
-
-## 📂 File Structure
-```
-📦emeraldthermosim
-├── app.py                  # Main Streamlit interface
-├── saf_logic.py            # SAF logic (parse, update, calculate)
-├── thermosim.py            # Core Rankine simulation functions
-├── diagram_renderer.py     # Graphviz/Mermaid rendering engine
-├── utils.py                # Helpers (unit conversion, validation)
-├── styles
-│   └── theme.toml          # Custom Streamlit theme
-├── presets
-│   └── default_rankine.json
-└── assets
-    └── example_diagrams/
-```
-
----
-
-## ✅ Main Features Implemented
-- Thermodynamic core (CoolProp-powered Rankine cycle)
-- SAF block diagram parser (editable + interactive)
-- Real-time recalculation of efficiency, work, heat
-- T-s and P-v plots (matplotlib)
-- Symbolic equation derivation (SymPy)
-- Auto-balancer to correct bad inputs
-- Version save/load system (JSON-based)
-
----
 
 ## 📜 Code: `app.py`
 ```python
@@ -144,13 +99,3 @@ def simulate_rankine(P_high, P_low, T_high, fluid):
     }
 ```
 
----
-
-## 📘 Notes
-- Edit `theme.toml` to customize Streamlit's look.
-- Extend SAF block parsing logic for regenerative cycles.
-- Add Firebase or SQLite backend for user state saving.
-
----
-
-> Developed by Emeraldking 👑 | Powered by Anna 🧡
