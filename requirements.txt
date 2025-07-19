@@ -2,3 +2,4 @@
 coolprop
 matplotlib
 graphviz
+sympy
