@@ -1,3 +1,4 @@
 ﻿streamlit
 coolprop
 matplotlib
+graphviz
