@@ -1,47 +1,37 @@
 # thermosim.py
 
 import matplotlib.pyplot as plt
-import CoolProp.CoolProp as CP
 import numpy as np
+from io import BytesIO
+import coolprop.CoolProp as CP
 
 def simulate_rankine(P_high, P_low, T_high, fluid):
-    # 1 -> Pump (isentropic compression)
+    # State 1: Saturated liquid at low pressure
     h1 = CP.PropsSI('H', 'P', P_low, 'Q', 0, fluid)
     s1 = CP.PropsSI('S', 'P', P_low, 'Q', 0, fluid)
 
-    h2s = CP.PropsSI('H', 'P', P_high, 'S', s1, fluid)
-    work_pump = h2s - h1
+    # Pump work (isentropic)
+    v1 = 1 / CP.PropsSI('D', 'P', P_low, 'Q', 0, fluid)
+    work_pump = v1 * (P_high - P_low)
+    h2 = h1 + work_pump
+    s2 = CP.PropsSI('S', 'P', P_high, 'H', h2, fluid)
 
-    # 2 -> Boiler (isobaric heating)
+    # State 3: Superheated vapor at P_high and T_high
     h3 = CP.PropsSI('H', 'P', P_high, 'T', T_high, fluid)
-    heat_added = h3 - h2s
-
-    # 3 -> Turbine (isentropic expansion)
     s3 = CP.PropsSI('S', 'P', P_high, 'T', T_high, fluid)
-    h4s = CP.PropsSI('H', 'P', P_low, 'S', s3, fluid)
-    work_turbine = h3 - h4s
 
+    # Turbine expansion to P_low (isentropic)
+    s4 = s3
+    h4 = CP.PropsSI('H', 'P', P_low, 'S', s4, fluid)
+
+    work_turbine = h3 - h4
+    heat_added = h3 - h2
     net_work = work_turbine - work_pump
     efficiency = net_work / heat_added
 
-    # Generate T-s Diagram
-    T_vals = np.linspace(300, T_high, 100)
-    s_vals = [CP.PropsSI('S', 'P', P_high, 'T', T, fluid) for T in T_vals]
-    fig_ts, ax1 = plt.subplots()
-    ax1.plot(s_vals, T_vals, label="Boiler Curve")
-    ax1.set_xlabel("Entropy (J/kg·K)")
-    ax1.set_ylabel("Temperature (K)")
-    ax1.set_title("T-s Diagram")
-    ax1.grid(True)
-
-    # Generate P-v Diagram
-    v_vals = [1 / CP.PropsSI('D', 'P', P_high, 'T', T, fluid) for T in T_vals]
-    fig_pv, ax2 = plt.subplots()
-    ax2.plot(v_vals, [P_high] * len(v_vals), label="Boiler Pressure Line")
-    ax2.set_xlabel("Specific Volume (m³/kg)")
-    ax2.set_ylabel("Pressure (Pa)")
-    ax2.set_title("P-v Diagram")
-    ax2.grid(True)
+    # Plotting
+    ts_plot = generate_ts_plot([s1, s2, s3, s4, s1], [h1, h2, h3, h4, h1])
+    pv_plot = generate_pv_plot(fluid)
 
     return {
         "work_pump": work_pump,
@@ -49,6 +39,32 @@ def simulate_rankine(P_high, P_low, T_high, fluid):
         "heat_added": heat_added,
         "net_work": net_work,
         "efficiency": efficiency,
-        "ts_plot": fig_ts,
-        "pv_plot": fig_pv
+        "ts_plot": ts_plot,
+        "pv_plot": pv_plot
     }
+
+def generate_ts_plot(s, h):
+    fig, ax = plt.subplots()
+    ax.plot(s, h, marker='o')
+    ax.set_title("T-s Diagram (approximate)")
+    ax.set_xlabel("Entropy (J/kg·K)")
+    ax.set_ylabel("Enthalpy (J/kg)")
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    buf.seek(0)
+    return plt.imread(buf)
+
+def generate_pv_plot(fluid):
+    P = np.logspace(4, 8, 100)
+    T = 300  # fixed temp
+    v = [1 / CP.PropsSI('D', 'T', T, 'P', p, fluid) for p in P]
+    fig, ax = plt.subplots()
+    ax.loglog(v, P)
+    ax.set_title("P-v Diagram (sampled)")
+    ax.set_xlabel("Specific Volume (m³/kg)")
+    ax.set_ylabel("Pressure (Pa)")
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    buf.seek(0)
+    return plt.imread(buf)
+
